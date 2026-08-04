@@ -1,0 +1,58 @@
+Index: u-boot-2026.07/dts/upstream/src/arm64/airoha/an7581-nokia-xg-040g-md.dts
+===================================================================
+--- u-boot-2026.07.orig/dts/upstream/src/arm64/airoha/an7581-nokia-xg-040g-md.dts
++++ u-boot-2026.07/dts/upstream/src/arm64/airoha/an7581-nokia-xg-040g-md.dts
+@@ -101,3 +101,53 @@
+ &gdm1 {
+ 	status = "okay";
+ };
++
++&switch {
++	status = "okay";
++};
++
++&mdio {
++	/* EN8811HN 2.5G PHY - board address 0xf (C45) */
++	en8811: ethernet-phy@f {
++		compatible = "ethernet-phy-ieee802.3-c45";
++		reg = <0xf>;
++		reset-gpios       = <&en7581_pinctrl 31 GPIO_ACTIVE_LOW>;
++		reset-assert-us   = <10000>;
++		reset-deassert-us = <20000>;
++	};
++};
++
++&gdm4 {
++	status      = "okay";
++	phy-handle  = <&en8811>;
++	phy-mode    = "2500base-x";
++};
++
++/* ===== 3x 1G on-board LAN ports (lan2/lan3/lan4) ===== */
++
++&gsw_port2 {
++	status = "okay";
++	label  = "lan2";
++};
++
++&gsw_phy2 {
++	status = "okay";
++};
++
++&gsw_port3 {
++	status = "okay";
++	label  = "lan3";
++};
++
++&gsw_phy3 {
++	status = "okay";
++};
++
++&gsw_port4 {
++	status = "okay";
++	label  = "lan4";
++};
++
++&gsw_phy4 {
++	status = "okay";
++};

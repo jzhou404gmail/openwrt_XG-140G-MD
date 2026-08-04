@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: OpenWrt Builder
+Date: Sat, 2 Aug 2026 15:00:00 +0000
+Subject: [PATCH] pmdomain: mediatek: expose AIROHA_CPU_PM_DOMAIN for
+ ARCH_AIROHA
+
+The AIROHA_CPU_PM_DOMAIN config option is placed inside the
+"MediaTek PM Domains" menu which depends on ARCH_MEDIATEK || COMPILE_TEST.
+Airoha SoCs use ARCH_AIROHA, not ARCH_MEDIATEK, so the menu is hidden
+and AIROHA_CPU_PM_DOMAIN is silently dropped even when set in target
+config.
+
+Add ARCH_AIROHA to the menu dependency so the option is visible.
+
+Signed-off-by: OpenWrt Builder
+---
+ drivers/pmdomain/mediatek/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/pmdomain/mediatek/Kconfig
++++ b/drivers/pmdomain/mediatek/Kconfig
+@@ -1,5 +1,5 @@
+ menu "MediaTek PM Domains"
+-	depends on ARCH_MEDIATEK || COMPILE_TEST
++	depends on ARCH_MEDIATEK || ARCH_AIROHA || COMPILE_TEST
+ 
+ config MTK_SCPSYS
+ 	bool "MediaTek SCPSYS Support"

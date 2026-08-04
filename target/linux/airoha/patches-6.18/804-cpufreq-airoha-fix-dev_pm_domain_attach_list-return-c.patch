@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: OpenWrt Builder
+Date: Sun, 3 Aug 2026 08:00:00 +0000
+Subject: [PATCH] cpufreq: airoha: fix dev_pm_domain_attach_list return value
+ check
+
+dev_pm_domain_attach_list() returns a positive value (the number of
+attached PM domains) on success, 0 when no domains are found, and a
+negative errno on failure.
+
+The driver incorrectly used `if (ret)` which treats the positive
+success return value (1) as an error, causing probe to fail with
+"probe with driver airoha-cpufreq failed with error 1".
+
+Fix by checking `if (ret < 0)` to only catch actual errors.
+
+Signed-off-by: OpenWrt Builder
+---
+ drivers/cpufreq/airoha-cpufreq.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/cpufreq/airoha-cpufreq.c
++++ b/drivers/cpufreq/airoha-cpufreq.c
+@@ -65,7 +65,7 @@
+ 	/* Attach PM for OPP */
+ 	ret = dev_pm_domain_attach_list(cpu_dev, &attach_data,
+ 					&priv->pd_list);
+-	if (ret)
++	if (ret < 0)
+ 		goto clear_opp_config;
+ 
+ 	cpufreq_dt = platform_device_register_simple("cpufreq-dt", -1, NULL, 0);

@@ -1,0 +1,12 @@
+Index: u-boot-2026.07/configs/an7581_nokia_xg-040g-md_defconfig
+===================================================================
+--- u-boot-2026.07.orig/configs/an7581_nokia_xg-040g-md_defconfig
++++ u-boot-2026.07/configs/an7581_nokia_xg-040g-md_defconfig
+@@ -114,6 +114,7 @@
+ CONFIG_CMD_MII=y
+ CONFIG_CMD_MDIO=y
+ CONFIG_PCS_AIROHA_AN7581=y
++CONFIG_PHY_AIROHA=y
+ CONFIG_PHY=y
+ CONFIG_PINCTRL=y
+ CONFIG_PINCONF=y

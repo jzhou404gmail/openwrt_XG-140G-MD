@@ -1,0 +1,141 @@
+Index: u-boot-2026.07/dts/upstream/src/arm64/airoha/en7581.dtsi
+===================================================================
+--- u-boot-2026.07.orig/dts/upstream/src/arm64/airoha/en7581.dtsi
++++ u-boot-2026.07/dts/upstream/src/arm64/airoha/en7581.dtsi
+@@ -347,6 +347,36 @@
+ 			status = "disabled";
+ 		};
+ 
++		pon_pcs: pcs@1fa08000 {
++			compatible = "airoha,an7581-pcs-pon";
++			reg = <0x0 0x1fa08000 0x0 0x1000>, <0x0 0x1fa80000 0x0 0x60>,
++			      <0x0 0x1fa80a00 0x0 0x164>, <0x0 0x1fa84000 0x0 0x450>,
++			      <0x0 0x1fa85900 0x0 0x338>, <0x0 0x1fa86000 0x0 0x300>,
++			      <0x0 0x1fa8a000 0x0 0x1000>, <0x0 0x1fa8b000 0x0 0x1000>;
++			reg-names = "xfi_mac", "hsgmii_an", "hsgmii_pcs",
++				    "multi_sgmii", "usxgmii",
++				    "hsgmii_rate_adp", "xfi_ana", "xfi_pma";
++			resets = <&scuclk EN7581_XPON_MAC_RST>,
++				 <&scuclk EN7581_XPON_PHY_RST>;
++			reset-names = "mac", "phy";
++			airoha,scu = <&scuclk>;
++		};
++
++		eth_pcs: pcs@1fa09000 {
++			compatible = "airoha,an7581-pcs-eth";
++			reg = <0x0 0x1fa09000 0x0 0x1000>, <0x0 0x1fa70000 0x0 0x60>,
++			      <0x0 0x1fa70a00 0x0 0x164>, <0x0 0x1fa74000 0x0 0x450>,
++			      <0x0 0x1fa75900 0x0 0x338>, <0x0 0x1fa76000 0x0 0x300>,
++			      <0x0 0x1fa7a000 0x0 0x1000>, <0x0 0x1fa7b000 0x0 0x1000>;
++			reg-names = "xfi_mac", "hsgmii_an", "hsgmii_pcs",
++				    "multi_sgmii", "usxgmii",
++				    "hsgmii_rate_adp", "xfi_ana", "xfi_pma";
++			resets = <&scuclk EN7581_XSI_MAC_RST>,
++				 <&scuclk EN7581_XSI_PHY_RST>;
++			reset-names = "mac", "phy";
++			airoha,scu = <&scuclk>;
++		};
++
+ 		eth: ethernet@1fb50000 {
+ 			compatible = "airoha,en7581-eth";
+ 			reg = <0 0x1fb50000 0 0x2600>,
+@@ -394,6 +424,99 @@
+ 					pause;
+ 				};
+ 			};
++
++			gdm2: ethernet@2 {
++				compatible = "airoha,eth-mac";
++				reg = <2>;
++				pcs = <&pon_pcs>;
++				status = "disabled";
++			};
++
++			gdm4: ethernet@4 {
++				compatible = "airoha,eth-mac";
++				reg = <4>;
++				pcs = <&eth_pcs>;
++				status = "disabled";
++			};
++		};
++
++		switch: switch@1fb58000 {
++			compatible = "airoha,en7581-switch";
++			reg = <0 0x1fb58000 0 0x8000>;
++			status = "disabled";
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				gsw_port1: port@1 {
++					reg = <1>;
++					phy-mode = "internal";
++					phy-handle = <&gsw_phy1>;
++					status = "disabled";
++				};
++
++				gsw_port2: port@2 {
++					reg = <2>;
++					phy-mode = "internal";
++					phy-handle = <&gsw_phy2>;
++					status = "disabled";
++				};
++
++				gsw_port3: port@3 {
++					reg = <3>;
++					phy-mode = "internal";
++					phy-handle = <&gsw_phy3>;
++					status = "disabled";
++				};
++
++				gsw_port4: port@4 {
++					reg = <4>;
++					phy-mode = "internal";
++					phy-handle = <&gsw_phy4>;
++					status = "disabled";
++				};
++
++				port@6 {
++					reg = <6>;
++					ethernet = <&gdm1>;
++					phy-mode = "internal";
++					fixed-link {
++						speed = <10000>;
++						full-duplex;
++						pause;
++					};
++				};
++			};
++
++			mdio: mdio {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				gsw_phy1: ethernet-phy@9 {
++					reg = <9>;
++					compatible = "ethernet-phy-ieee802.3-c22";
++					status = "disabled";
++				};
++
++				gsw_phy2: ethernet-phy@a {
++					reg = <10>;
++					compatible = "ethernet-phy-ieee802.3-c22";
++					status = "disabled";
++				};
++
++				gsw_phy3: ethernet-phy@b {
++					reg = <11>;
++					compatible = "ethernet-phy-ieee802.3-c22";
++					status = "disabled";
++				};
++
++				gsw_phy4: ethernet-phy@c {
++					reg = <12>;
++					compatible = "ethernet-phy-ieee802.3-c22";
++					status = "disabled";
++				};
++			};
+ 		};
+ 	};
+ };

@@ -1,0 +1,9 @@
+Index: configs/an7581_nokia_xg-040g-md_defconfig
+===================================================================
+--- a/configs/an7581_nokia_xg-040g-md_defconfig
++++ b/configs/an7581_nokia_xg-040g-md_defconfig
+@@ -76,3 +76,4 @@
+ CONFIG_MTD_SPI_NAND=y
++CONFIG_SPI_NAND_FMSH=y
+ CONFIG_MTD_UBI=y
+ CONFIG_MTD_UBI_MODULE=y

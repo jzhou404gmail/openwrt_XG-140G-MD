@@ -1,0 +1,53 @@
+Index: u-boot-2026.07/arch/arm/dts/an7581-u-boot.dtsi
+===================================================================
+--- u-boot-2026.07.orig/arch/arm/dts/an7581-u-boot.dtsi
++++ u-boot-2026.07/arch/arm/dts/an7581-u-boot.dtsi
+@@ -33,6 +33,7 @@
+ 		chip_scu: syscon@1fa20000 {
+ 			compatible = "airoha,en7581-chip-scu", "syscon";
+ 			reg = <0x0 0x1fa20000 0x0 0x388>;
++			bootph-all;
+ 		};
+ 
+ 		pon_pcs: pcs@1fa08000 {
+@@ -83,6 +84,7 @@
+ 				<0 0x1fb54000 0 0x2000>,
+ 				<0 0x1fb56000 0 0x2000>;
+ 			reg-names = "fe", "qdma0", "qdma1";
++			status = "okay";
+ 
+ 			resets = <&scuclk EN7581_FE_RST>,
+ 				 <&scuclk EN7581_FE_PDMA_RST>,
+@@ -128,6 +130,7 @@
+ 		switch: switch@1fb58000 {
+ 			compatible = "airoha,en7581-switch";
+ 			reg = <0 0x1fb58000 0 0x8000>;
++			status = "okay";
+ 
+ 			mdio: mdio {
+ 				#address-cells = <1>;
+@@ -145,6 +148,8 @@
+ 
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
++			status = "okay";
++			bootph-all;
+ 
+ 			spi_nand: nand@0 {
+ 				compatible = "spi-nand";
+@@ -152,6 +157,7 @@
+ 				spi-max-frequency = <50000000>;
+ 				spi-tx-bus-width = <1>;
+ 				spi-rx-bus-width = <2>;
++				bootph-all;
+ 			};
+ 		};
+ 
+@@ -177,6 +183,7 @@
+ 
+ &scuclk {
+ 	compatible = "airoha,en7581-scu", "syscon";
++	bootph-all;
+ };
+ 
+ &uart1 {
