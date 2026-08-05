@@ -1,9 +1,30 @@
+# Build artifacts
 /bin/
 /build_dir/
 /staging_dir/
 /tmp/
 /dl/
-*.o
-*.ko
-*.bin
-*.img
+/logs/
+/.ccache/
+
+# Configs
+.config
+.config.old
+*.txt
+
+# Feeds
+/feeds/
+/package/feeds/
+
+# Keys
+*.pem
+*.key
+
+# Local packages
+package/mypack/
+
+# Hotplug / init.d / uci-defaults are generated, not sourced
+target/linux/airoha/an7581/base-files/etc/hotplug.d/
+target/linux/airoha/an7581/base-files/etc/init.d/
+target/linux/airoha/an7581/base-files/etc/uci-defaults/
+
