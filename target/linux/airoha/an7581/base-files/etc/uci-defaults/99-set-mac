@@ -13,10 +13,13 @@ case "$BOARD" in
 		# Get base MAC from gdm1 (LAN) interface
 		BASE_MAC=""
 		for i in $(seq 1 30); do
-			BASE_MAC=$(cat /sys/class/net/dsa-mgr/address 2>/dev/null)
-			if [ -n "$BASE_MAC" ] && [ "$BASE_MAC" != "00:00:00:00:00:00" ]; then
-				break
-			fi
+			# Try dsa-mgr first (DSA renamed), then fallback to eth0
+			for iface in dsa-mgr eth0; do
+				BASE_MAC=$(cat /sys/class/net/$iface/address 2>/dev/null)
+				if [ -n "$BASE_MAC" ] && [ "$BASE_MAC" != "00:00:00:00:00:00" ]; then
+					break 2
+				fi
+			done
 			sleep 1
 		done
 

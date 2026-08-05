@@ -10,13 +10,17 @@
 get_base_mac() {
 	local mac=""
 	local tries=0
+	local iface=""
 
 	while [ $tries -lt 30 ]; do
-		mac=$(cat /sys/class/net/dsa-mgr/address 2>/dev/null)
-		if [ -n "$mac" ] && [ "$mac" != "00:00:00:00:00:00" ]; then
-			echo "$mac"
-			return 0
-		fi
+		# Try dsa-mgr first (DSA renamed), then fallback to eth0
+		for iface in dsa-mgr eth0; do
+			mac=$(cat /sys/class/net/$iface/address 2>/dev/null)
+			if [ -n "$mac" ] && [ "$mac" != "00:00:00:00:00:00" ]; then
+				echo "$mac"
+				return 0
+			fi
+		done
 		tries=$((tries + 1))
 		sleep 1
 	done

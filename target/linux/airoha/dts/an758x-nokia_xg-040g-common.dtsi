@@ -68,8 +68,6 @@
 &gdm1 {
 	status = "okay";
 
-	/* DSA master (CPU conduit to switch), renamed to avoid
-	 * confusion with user-facing ports in LuCI */
 	openwrt,netdev-name = "dsa-mgr";
 
 	nvmem-cell-names = "mac-address";
