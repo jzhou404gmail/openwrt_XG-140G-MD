@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Enable PPE Flow Offloading by default for Nokia XG-040G-MD
+#
+
+. /lib/functions.sh
+
+BOARD=$(board_name)
+case "$BOARD" in
+	nokia,xg-040g-md|\
+	nokia,xg-040g-md-ubi)
+		logger -t "flowoffload" "Enabling PPE Flow Offloading"
+
+		# Wait for firewall to be initialized
+		sleep 5
+
+		# Enable flow offloading in firewall config
+		uci set firewall.@defaults[0].flow_offloading='1'
+		uci set firewall.@defaults[0].flow_offloading_hw='1'
+		uci commit firewall
+
+		# Restart firewall to apply changes
+		/etc/init.d/firewall restart
+
+		logger -t "flowoffload" "PPE Flow Offloading enabled"
+
+		# Self-remove after first run
+		rm -f /etc/uci-defaults/99-enable-flowoffload
+		;;
+esac
+
+exit 0

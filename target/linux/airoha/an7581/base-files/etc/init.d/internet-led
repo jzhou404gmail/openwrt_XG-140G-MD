@@ -1,0 +1,79 @@
+#!/bin/sh
+#
+# Internet LED monitor for Nokia XG-040G-MD
+# Periodically checks WAN connectivity and updates Internet LED
+#
+
+. /lib/functions/leds.sh
+
+LED="green:wan-online"
+WAN_IF="wan"
+CHECK_INTERVAL=5
+
+check_internet() {
+	local online=0
+
+	# Check if WAN interface exists and has carrier
+	if [ -e /sys/class/net/$WAN_IF/carrier ]; then
+		carrier=$(cat /sys/class/net/$WAN_IF/carrier 2>/dev/null)
+		if [ "$carrier" = "1" ]; then
+			# Check if WAN has an IP address
+			if ip addr show $WAN_IF 2>/dev/null | grep -q 'inet '; then
+				# Try to check if we can reach the gateway
+				if [ -f /tmp/.wan_connected ]; then
+					online=1
+				elif ping -c 1 -W 3 8.8.8.8 >/dev/null 2>&1; then
+					online=1
+					touch /tmp/.wan_connected
+				fi
+			fi
+		fi
+	fi
+
+	if [ $online -eq 1 ]; then
+		led_on $LED
+	else
+		led_off $LED
+		rm -f /tmp/.wan_connected
+	fi
+}
+
+start_service() {
+	logger -t "internet-led" "Starting Internet LED monitor"
+	while true; do
+		check_internet
+		sleep $CHECK_INTERVAL
+	done
+}
+
+stop_service() {
+	logger -t "internet-led" "Stopping Internet LED monitor"
+	led_off $LED
+	rm -f /tmp/.wan_connected
+}
+
+case "$1" in
+	start)
+		start_service &
+		;;
+	stop)
+		stop_service
+		;;
+	restart)
+		stop_service
+		start_service &
+		;;
+	status)
+		if [ -d /proc/$2 ]; then
+			echo "running"
+		else
+			echo "stopped"
+		fi
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|status}"
+		exit 1
+		;;
+esac
+
+exit 0

@@ -1,0 +1,100 @@
+#!/bin/sh
+#
+# Internet LED control script for Nokia XG-040G-MD
+# Controls green:wan-online LED based on WAN Internet connectivity
+#
+# Usage: Called from hotplug.d/iface (action=ifup/ifdown/connect/disconnect)
+#        Or called directly (with no args) for one-shot status check
+#
+
+LED="green:wan-online"
+WAN_IF="wan"
+LOG_TAG="internet-led"
+
+led_ctrl() {
+	local state="$1"
+	local sys="/sys/class/leds/$LED/brightness"
+
+	if [ ! -w "$sys" ]; then
+		logger -t "$LOG_TAG" "LED $LED not writable"
+		return 1
+	fi
+
+	case "$state" in
+		on)
+			echo 255 > "$sys" 2>/dev/null
+			;;
+		off)
+			echo 0 > "$sys" 2>/dev/null
+			;;
+	esac
+	return 0
+}
+
+check_wan_online() {
+	local online=0
+
+	# 1. Check interface carrier
+	local carrier=""
+	if [ -r /sys/class/net/$WAN_IF/carrier ]; then
+		carrier=$(cat /sys/class/net/$WAN_IF/carrier 2>/dev/null)
+	fi
+
+	if [ "$carrier" != "1" ]; then
+		return 0
+	fi
+
+	# 2. Check for IPv4 address
+	local has_ipv4=0
+	if command -v ifconfig >/dev/null 2>&1; then
+		if ifconfig $WAN_IF 2>/dev/null | grep -q "inet "; then
+			has_ipv4=1
+		fi
+	elif command -v ip >/dev/null 2>&1; then
+		if ip -4 addr show dev $WAN_IF 2>/dev/null | grep -q "inet "; then
+			has_ipv4=1
+		fi
+	fi
+
+	if [ $has_ipv4 -eq 1 ]; then
+		online=1
+	fi
+
+	if [ $online -eq 1 ]; then
+		led_ctrl on
+	else
+		led_ctrl off
+	fi
+
+	return $online
+}
+
+case "$ACTION" in
+	ifup)
+		if [ "$INTERFACE" = "$WAN_IF" ] || [ "$DEVICE" = "$WAN_IF" ]; then
+			logger -t "$LOG_TAG" "WAN IFUP, enabling Internet LED after delay"
+			( sleep 10; check_wan_online ) &
+		fi
+		;;
+	ifdown)
+		if [ "$INTERFACE" = "$WAN_IF" ] || [ "$DEVICE" = "$WAN_IF" ]; then
+			logger -t "$LOG_TAG" "WAN IFDOWN, disabling Internet LED"
+			led_ctrl off
+		fi
+		;;
+	connect)
+		logger -t "$LOG_TAG" "PPP/WAN CONNECT, enabling Internet LED"
+		led_ctrl on
+		;;
+	disconnect)
+		logger -t "$LOG_TAG" "PPP/WAN DISCONNECT, disabling Internet LED"
+		led_ctrl off
+		;;
+esac
+
+# Support direct invocation for one-shot check (for init scripts / cron)
+if [ -z "$ACTION" ]; then
+	check_wan_online
+fi
+
+exit 0
