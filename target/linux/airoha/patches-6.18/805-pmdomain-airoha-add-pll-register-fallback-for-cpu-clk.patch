@@ -1,0 +1,117 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: OpenWrt Builder
+Date: Tue, 5 Aug 2026 21:10:00 +0000
+Subject: [PATCH] pmdomain: airoha: add PLL register fallback for CPU clock rate
+
+The CPU clock rate is obtained via an SMC call to BL31 (ARM Trusted
+Firmware). When using the original manufacturer BL31 instead of the
+OpenWrt custom BL31, this SMC call may return 0, causing cpufreq
+initialization to fail with:
+  cpufreq: cpufreq_policy_online: ->get() failed
+  cpufreq-dt: failed register driver: -19
+
+Add a fallback that reads the CPU PLL registers directly when the SMC
+call returns 0. The CPU PLL frequency is calculated from:
+  - PCW register (0x1fa202b4): bits [30:24] = PCW integer
+  - CHG register (0x1fa202b8): bits [6:4] = posdiv
+  - freq = pcw_int * 50MHz / (1 << posdiv)
+
+The registers are ioremap'd once during probe and stored in the
+private structure for later use.
+
+Signed-off-by: OpenWrt Builder
+---
+ drivers/pmdomain/mediatek/airoha-cpu-pmdomain.c | 68 ++++++++++++++++++++++---
+ 1 file changed, 62 insertions(+), 6 deletions(-)
+
+--- a/drivers/pmdomain/mediatek/airoha-cpu-pmdomain.c
++++ b/drivers/pmdomain/mediatek/airoha-cpu-pmdomain.c
+@@ -3,6 +3,7 @@
+ #include <linux/arm-smccc.h>
+ #include <linux/bitfield.h>
+ #include <linux/clk-provider.h>
++#include <linux/io.h>
+ #include <linux/module.h>
+ #include <linux/platform_device.h>
+ #include <linux/pm_domain.h>
+@@ -11,6 +12,14 @@
+ #define AIROHA_SIP_AVS_HANDLE			0x82000301
+ #define AIROHA_AVS_OP_BASE			0xddddddd0
+ #define AIROHA_AVS_OP_MASK			GENMASK(1, 0)
++
++/* CPU PLL registers for fallback when SMC is unavailable */
++#define AIROHA_CPU_PLL_BASE			0x1fa20000
++#define AIROHA_CPU_PLL_PCW_OFFSET		0x2b4
++#define AIROHA_CPU_PLL_CHG_OFFSET		0x2b8
++#define AIROHA_CPU_PLL_PCW_INT_MASK		GENMASK(30, 24)
++#define AIROHA_CPU_PLL_POSDIV_MASK		GENMASK(6, 4)
++
+ #define AIROHA_AVS_OP_FREQ_DYN_ADJ		(AIROHA_AVS_OP_BASE | \
+ 						 FIELD_PREP(AIROHA_AVS_OP_MASK, 0x1))
+ #define AIROHA_AVS_OP_GET_FREQ			(AIROHA_AVS_OP_BASE | \
+@@ -19,6 +28,8 @@
+ struct airoha_cpu_pmdomain_priv {
+ 	struct clk_hw hw;
+ 	struct generic_pm_domain pd;
++	void __iomem *pll_pcw;
++	void __iomem *pll_chg;
+ };
+
+ static int airoha_cpu_pmdomain_clk_determine_rate(struct clk_hw *hw,
+@@ -30,13 +41,35 @@
+ static unsigned long airoha_cpu_pmdomain_clk_get(struct clk_hw *hw,
+ 						 unsigned long parent_rate)
+ {
++	struct airoha_cpu_pmdomain_priv *priv =
++		container_of(hw, struct airoha_cpu_pmdomain_priv, hw);
+ 	struct arm_smccc_res res;
++	unsigned long freq;
+
+ 	arm_smccc_1_1_invoke(AIROHA_SIP_AVS_HANDLE, AIROHA_AVS_OP_GET_FREQ,
+ 			     0, 0, 0, 0, 0, 0, &res);
+
+ 	/* SMCCC returns freq in MHz */
+-	return (int)(res.a0 * 1000 * 1000);
++	freq = (unsigned long)(res.a0 * 1000 * 1000);
++
++	/* Fallback to PLL register read when SMC returns 0
++	 * (e.g. original manufacturer BL31 doesn't support this SMC call)
++	 */
++	if (freq == 0 && priv->pll_pcw && priv->pll_chg) {
++		u32 pcw_val = readl(priv->pll_pcw);
++		u32 chg_val = readl(priv->pll_chg);
++		u32 pcw_int = FIELD_GET(AIROHA_CPU_PLL_PCW_INT_MASK, pcw_val);
++		u32 posdiv = FIELD_GET(AIROHA_CPU_PLL_POSDIV_MASK, chg_val);
++
++		if (pcw_int > 0) {
++			if (posdiv == 0)
++				freq = pcw_int * 50 * 1000 * 1000;
++			else
++				freq = (pcw_int * 50 * 1000 * 1000) >> posdiv;
++		}
++	}
++
++	return freq;
+ }
+
+ /* Airoha CPU clk SMCC is always enabled */
+@@ -80,6 +113,19 @@
+ 	if (!priv)
+ 		return -ENOMEM;
+
++	/* Map CPU PLL registers for fallback clock rate reading */
++	priv->pll_pcw = devm_ioremap(dev,
++				     AIROHA_CPU_PLL_BASE + AIROHA_CPU_PLL_PCW_OFFSET,
++				     0x4);
++	priv->pll_chg = devm_ioremap(dev,
++				     AIROHA_CPU_PLL_BASE + AIROHA_CPU_PLL_CHG_OFFSET,
++				     0x4);
++	if (!priv->pll_pcw || !priv->pll_chg) {
++		dev_warn(dev, "failed to map CPU PLL registers, SMC fallback disabled\n");
++		priv->pll_pcw = NULL;
++		priv->pll_chg = NULL;
++	}
++
+ 	/* Init and register a get-only clk for Cpufreq */
+ 	priv->hw.init = &init;
+ 	ret = devm_clk_hw_register(dev, &priv->hw);
